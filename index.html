@@ -1,334 +1,406 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>הלאה בקיצר – מוזיקה</title>
-  <style>
-    :root{
-      --bg-color:#121217;--card-color:#1F1F27;--text-color:#EAEAEA;--highlight-color:#FFCC00;--snippet-color:#C2C2C2;--timestamp-color:#888;--btn-color:#D7263D;--btn-hover-color:#F44336;--accent:#2dd4bf;--muted:#2a2a35
-    }
-    body{background:var(--bg-color);color:var(--text-color);font-family:'Segoe UI',system-ui,Arial,sans-serif;margin:0;padding:20px;direction:rtl;text-align:right;overflow-x:hidden;transition:background .3s,color .3s}
-    .light-mode{--bg-color:#f4f4f4;--card-color:#f5f5f5;--text-color:#222;--highlight-color:#222;--snippet-color:#444;--timestamp-color:#666;--muted:#e9e9e9}
-    h1.title{font-size:3rem;font-weight:800;text-align:center;margin:10px 0 18px;font-family:'Assistant',sans-serif;letter-spacing:.5px;text-shadow:0 0 15px rgba(255,255,255,.08)}
-    .toolbar{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:18px}
-    .btn{background:var(--btn-color);color:#fff;padding:10px 16px;border:none;border-radius:10px;cursor:pointer;font-weight:700;transition:background .25s,transform .1s}
-    .btn:hover{background:var(--btn-hover-color)}
-    .btn:active{transform:translateY(1px)}
-    .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--text-color)}
-    select.btn{appearance:none;padding-right:12px;padding-left:30px;cursor:pointer}
-    .dashboard{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px}
-    .card{background:var(--card-color);border:1px solid rgba(255,255,255,.05);border-radius:14px;padding:16px;box-shadow:0 0 12px rgba(0,0,0,.35);opacity:0;transform:translateY(12px);animation:fadeUp .6s ease forwards}
-    @keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
-    .card h2{font-size:1.05rem;margin:0 0 10px;border-bottom:1px solid var(--muted);padding-bottom:8px;display:flex;align-items:center;gap:10px}
-    .card h2 img{width:20px;height:20px;border-radius:4px}
-    ul{list-style:none;margin:0;padding:0}
-    li{margin:0 0 12px;position:relative;padding-right:16px}
-    li::before{content:'•';position:absolute;right:0;color:var(--highlight-color);font-size:1.25em;line-height:1}
-    .title-row{display:flex;align-items:center;gap:8px}
-    .src-badge{font-size:.72rem;background:rgba(255,255,255,.08);padding:2px 8px;border-radius:999px}
-    .snippet{font-size:.9rem;color:var(--snippet-color);margin-top:4px}
-    .timestamp{font-size:.8rem;color:var(--timestamp-color);margin-top:2px}
-    .ltr{direction:ltr;text-align:left}
-    a{color:var(--highlight-color);text-decoration:none}
-    a:hover{text-decoration:underline}
-    .hidden .snippet,.hidden .timestamp{display:none}
-    .status{max-width:1100px;margin:0 auto 10px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
-    .pill{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);padding:6px 10px;border-radius:999px;font-size:.85rem}
-    .error{color:#ff7272}
-    .grid-toggle{display:flex;gap:8px;justify-content:center;margin:6px 0 18px}
-    .toggle{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--text-color);padding:8px 12px;border-radius:10px;cursor:pointer}
-    .toggle.active{background:var(--accent);border-color:transparent;color:#003133}
-    .combined{grid-column:1/-1}
-    .small{font-size:.85rem;color:var(--timestamp-color)}
-    @media (max-width:600px){h1.title{font-size:2rem}.btn{padding:9px 12px}.card{padding:14px}}
-  </style>
-</head>
-<body class="dark-mode">
-  <h1 class="title">הלאה בקיצר</h1>
-
-  <div class="toolbar">
-    <button class="btn" id="refresh">רענן</button>
-    <button class="btn" id="theme">מצב צבע</button>
-    <button class="btn" id="toggleSnips">הצג/הסתר תקצירים</button>
-    <button class="btn secondary" id="toggleView" title="תצוגה משולבת/לפי מקור" data-mode="source">תצוגה: לפי מקור</button>
-    <select class="btn secondary" id="limitSelect" title="כמה פריטים לכל מקור">
-      <option value="3">3 לפר מקור</option>
-      <option value="5">5 לפר מקור</option>
-      <option value="10">10 לפר מקור</option>
-    </select>
-    <button class="btn secondary" id="exportOpml">ייצוא OPML</button>
-  </div>
-
-  <div class="status" id="status"></div>
-  <div class="grid-toggle" id="gridToggle" hidden>
-    <button class="toggle active" data-mode="source">לפי מקור</button>
-    <button class="toggle" data-mode="combined">משולב</button>
-  </div>
-
-  <div class="dashboard" id="dashboard"></div>
-
-  <template id="cardTmpl">
-    <div class="card">
-      <h2><img alt="" /><span class="feed-title"></span></h2>
-      <ul class="items"></ul>
-    </div>
-  </template>
-
-  <template id="combinedTmpl">
-    <div class="card combined">
-      <h2>הכותרות האחרונות (משולב)</h2>
-      <ul class="items"></ul>
-      <div class="small">ממויין לפי זמן הפרסום (חדש לישן)</div>
-    </div>
-  </template>
-
-  <script>
-  // ===== הגדרת פידים =====
-  const feeds = [
-    { name:"Mako-Music", url:"https://rcs.mako.co.il/rss/f6750a2610f26110VgnVCM1000005201000aRCRD.xml", lang:"rtl" },
-    { name:"Pitchfork News", url:"https://pitchfork.com/rss/news/", lang:"ltr" },
-    { name:"Pitchfork Reviews", url:"https://pitchfork.com/reviews/albums/rss/", lang:"ltr" },
-    { name:"AllMusic News", url:"https://www.allmusic.com/rss/news", lang:"ltr" },
-    { name:"Stereogum", url:"https://www.stereogum.com/feed/", lang:"ltr" },
-    { name:"Consequence of Sound", url:"https://consequence.net/feed/", lang:"ltr" },
-    { name:"The Fader", url:"https://www.thefader.com/rss/all", lang:"ltr" },
-    { name:"NME", url:"https://www.nme.com/news/music/feed", lang:"ltr" },
-    { name:"The Guardian Music", url:"https://www.theguardian.com/music/rss", lang:"ltr" },
-    { name:"Billboard", url:"https://www.billboard.com/feed/", lang:"ltr" },
-    { name:"Rolling Stone", url:"https://www.rollingstone.com/music/feed/", lang:"ltr" },
-    { name:"BrooklynVegan", url:"https://www.brooklynvegan.com/feed/", lang:"ltr" },
-    { name:"EarMilk", url:"https://www.earmilk.com/feed/", lang:"ltr" },
-    { name:"Metal Injection", url:"https://metalinjection.net/feed", lang:"ltr" },
-    { name:"Blabbermouth", url:"https://www.blabbermouth.net/news/feed/", lang:"ltr" },
-    { name:"JazzTimes", url:"https://jazztimes.com/feed/", lang:"ltr" },
-    { name:"Indie Shuffle", url:"https://indieshuffle.com/feed/", lang:"ltr" },
-    { name:"Guitar World", url:"https://www.guitarworld.com/rss.xml", lang:"ltr" },
-    { name:"MusicRadar News", url:"https://www.musicradar.com/news/rss/news.xml", lang:"ltr" },
-    { name:"XXL (Hip-Hop)", url:"https://www.xxlmag.com/feed/", lang:"ltr" },
-    { name:"Ynet – תרבות", url:"https://www.ynet.co.il/Integration/StoryRss1854.xml", lang:"rtl" },
-    { name:"Walla תרבות", url:"https://rss.walla.co.il/feed/272", lang:"rtl" },
-    { name:"BBC Music", url:"http://feeds.bbci.co.uk/music/rss.xml", lang:"ltr" }
-  ];
-
-  // ===== קבועים / מצב =====
-  const $ = (sel, root=document) => root.querySelector(sel);
-  const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
-  const statusBox = $('#status');
-  const dash = $('#dashboard');
-  const cacheKey = 'musicFeedsCache.v2';
-  const LIMIT_KEY = 'perSourceLimit';
-
-  // קריאה מה-LocalStorage עם ברירת מחדל 5
-  let perSourceLimit = Number(localStorage.getItem(LIMIT_KEY) || 5);
-  // נשמור את התוצאות האחרונות כדי שנוכל לרנדר מחדש מיידית כשמשנים את הבורר
-  let latestResults = null;
-
-  function sanitizeHTML(str){
-    const div=document.createElement('div');
-    div.innerHTML=str||''; return div.textContent||div.innerText||'';
-  }
-
-  function relTime(date){
-    try{
-      const d = new Date(date);
-      if(isNaN(d)) return '';
-      const rtf = new Intl.RelativeTimeFormat('he-IL', { numeric:'auto' });
-      const diff = (d - new Date())/1000;
-      const abs = Math.abs(diff);
-      const map = [ [60,'seconds'], [60,'minutes'], [24,'hours'], [7,'days'], [4.345,'weeks'], [12,'months'], [Number.POSITIVE_INFINITY,'years'] ];
-      let unit='seconds', value=diff, acc=1;
-      for(const [step,u] of map){
-        if(abs<acc*step){ unit=u; value=diff/acc; break; }
-        acc*=step;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>הלאה בקיצר – מוזיקה (Lite)</title>
+    <style>
+      :root {
+        --bg: #121217;
+        --card: #1f1f27;
+        --txt: #eaeaea;
+        --acc: #ffcc00;      /* נקודת דגש לכדורים • וכד' */
+        --muted: #2a2a35;
+        --btn: #d7263d;
+        --btnh: #f44336;
+        /* צבעי קישורים – קריאים מאוד על רקע כהה */
+        --link: #8be9fd;     /* תכלת-ציאן בהיר (קריא על שחור) */
+        --link-hover: #ffffff;
+        --link-visited: #b6a1ff; /* אופציונלי – סגול בהיר לביקור */
       }
-      return rtf.format(Math.round(value), unit);
-    }catch{ return '' }
-  }
 
-  function getPubDate(item){
-    return (
-      item.querySelector('pubDate')?.textContent ||
-      item.querySelector('updated')?.textContent ||
-      item.querySelector('published')?.textContent ||
-      item.querySelector('dc\\:date')?.textContent ||
-      ''
-    );
-  }
-
-  function parseItems(xmlDoc){
-    const items = xmlDoc.querySelectorAll('item, entry');
-    return [...items].map(n => {
-      const link = n.querySelector('link')?.getAttribute?.('href') || n.querySelector('link')?.textContent || '#';
-      const title = sanitizeHTML(n.querySelector('title')?.textContent || '(ללא כותרת)');
-      const desc = sanitizeHTML(n.querySelector('description, summary, content')?.textContent || '');
-      const date = sanitizeHTML(getPubDate(n));
-      return { title, link, desc, date };
-    });
-  }
-
-  function favicon(url){
-    try{ return `https://www.google.com/s2/favicons?sz=64&domain_url=${new URL(url).origin}` }catch{ return '' }
-  }
-
-  function opmlExport(){
-    const head = `<?xml version="1.0" encoding="UTF-8"?>\n<opml version="2.0"><head><title>Music Feeds</title></head><body>`;
-    const body = feeds.map(f=>`<outline text="${f.name}" title="${f.name}" type="rss" xmlUrl="${f.url}" />`).join('');
-    const end = `</body></opml>`;
-    const blob = new Blob([head+body+end], { type:'text/xml' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = 'music-feeds.opml'; a.click();
-  }
-
-  async function fetchFeed(feed){
-    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(feed.url)}`;
-    const res = await fetch(proxy);
-    if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    const { contents } = await res.json();
-    const xml = new DOMParser().parseFromString(contents,'text/xml');
-    if(xml.querySelector('parsererror')) throw new Error('Parser error');
-
-    const items = parseItems(xml)
-      .sort((a,b)=> new Date(b.date||0) - new Date(a.date||0))
-      .slice(0, perSourceLimit); // שימוש בהעדפה הנוכחית
-
-    return { feed, items };
-  }
-
-  function saveCache(data){ try{ localStorage.setItem(cacheKey, JSON.stringify({ t:Date.now(), data })) }catch{} }
-  function loadCache(maxAgeMs=10*60*1000){
-    try{
-      const raw = localStorage.getItem(cacheKey);
-      if(!raw) return null;
-      const obj = JSON.parse(raw);
-      if(Date.now()-obj.t>maxAgeMs) return null;
-      return obj.data;
-    }catch{ return null }
-  }
-
-  function renderSourceCards(results){
-    dash.innerHTML='';
-    results.forEach(({feed, items}) => {
-      items = items.slice(0, perSourceLimit); // הגנה נוספת
-      const card = document.importNode($('#cardTmpl').content,true);
-      const root = card.querySelector('.card');
-      if(feed.lang==='ltr') root.classList.add('ltr');
-      root.querySelector('img').src = favicon(feed.url);
-      root.querySelector('.feed-title').textContent = feed.name;
-      const list = root.querySelector('.items');
-      if(!items.length){
-        const p=document.createElement('p'); p.className='small'; p.textContent='אין פריטים להצגה כרגע.'; root.appendChild(p);
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--txt);
+        font-family: "Segoe UI", system-ui, Arial, sans-serif;
+        direction: rtl;
       }
-      items.forEach(it=>{
-        const li=document.createElement('li');
-        li.innerHTML = `<div class="title-row"><a href="${it.link}" target="_blank" rel="noopener">${it.title}</a></div>
-                        <div class="snippet">${it.desc}</div>
-                        <div class="timestamp">${sanitizeHTML(it.date)} · ${relTime(it.date)}</div>`;
-        list.appendChild(li);
+      .wrap {
+        max-width: 1100px;
+        margin: auto;
+        padding: 18px;
+      }
+      h1 {
+        margin: 6px 0 14px;
+        text-align: center;
+      }
+      /* קישורים – קריאות גבוהה על כהה */
+      a {
+        color: var(--link);
+        text-decoration: none;
+        font-weight: 600;
+      }
+      a:hover,
+      a:focus-visible {
+        color: var(--link-hover);
+        text-decoration: underline;
+        outline: none;
+      }
+      a:visited {
+        color: var(--link-visited);
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+      }
+      .btn,
+      select {
+        background: var(--btn);
+        color: #fff;
+        border: 0;
+        border-radius: 10px;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-weight: 700;
+      }
+      .btn:hover {
+        background: var(--btnh);
+      }
+      .secondary {
+        background: transparent;
+        color: var(--txt);
+        border: 1px solid #ffffff26;
+      }
+      select {
+        appearance: none;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 14px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid #ffffff14;
+        border-radius: 14px;
+        padding: 14px;
+      }
+      .card h2 {
+        margin: 0 0 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--muted);
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 1rem;
+      }
+      .card h2 img {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+      }
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      li {
+        padding-right: 14px;
+        position: relative;
+        margin: 0 0 10px;
+      }
+      li::before {
+        content: "•";
+        position: absolute;
+        right: 0;
+        color: var(--acc);
+      }
+      .src {
+        font-size: 0.72rem;
+        background: #ffffff14;
+        padding: 2px 8px;
+        border-radius: 999px;
+        margin-left: 6px;
+      }
+      .time {
+        font-size: 0.8rem;
+        opacity: 0.7;
+        margin-top: 4px;
+      }
+      .snip {
+        display: none;
+        font-size: 0.9rem;
+        opacity: 0.8;
+        margin-top: 4px;
+      }
+      body.show-snips .snip {
+        display: block;
+      }
+      .ltr {
+        direction: ltr;
+        text-align: left;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>הלאה בקיצר</h1>
+
+      <div class="toolbar">
+        <button class="btn" id="refresh">רענן</button>
+        <button class="btn" id="toggleSnips">הצג תקצירים</button>
+        <button class="btn secondary" id="toggleView" data-mode="source">
+          תצוגה: לפי מקור
+        </button>
+        <select class="secondary" id="perSource">
+          <option value="3">3 לפר מקור</option>
+          <option value="5" selected>5 לפר מקור</option>
+          <option value="10">10 לפר מקור</option>
+        </select>
+        <select class="secondary" id="combinedCap">
+          <option value="20">20 במשולב</option>
+          <option value="40" selected>40 במשולב</option>
+          <option value="60">60 במשולב</option>
+        </select>
+      </div>
+
+      <div id="status"></div>
+      <div class="grid" id="grid"></div>
+
+      <template id="cardTmpl">
+        <div class="card">
+          <h2><img alt="" /><span class="title"></span></h2>
+          <ul class="list"></ul>
+        </div>
+      </template>
+
+      <template id="combinedTmpl">
+        <div class="card">
+          <h2>כותרות אחרונות (משולב)</h2>
+          <ul class="list"></ul>
+          <div class="time">ממויין לפי זמן הפרסום (חדש לישן)</div>
+        </div>
+      </template>
+    </div>
+
+    <script>
+      const feeds = [
+        { name: "Mako-Music", url: "https://rcs.mako.co.il/rss/f6750a2610f26110VgnVCM1000005201000aRCRD.xml", lang: "rtl" },
+        { name: "Trancentral", url: "https://www.trancentral.tv/feed/", lang: "ltr" },
+        { name: "Ynet – תרבות", url: "https://www.ynet.co.il/Integration/StoryRss1854.xml", lang: "rtl" },
+        { name: "XXL (Hip-Hop)", url: "https://www.xxlmag.com/feed/", lang: "ltr" },
+        { name: "Walla תרבות", url: "https://rss.walla.co.il/feed/272", lang: "rtl" },
+        { name: "Pitchfork News", url: "https://pitchfork.com/rss/news/", lang: "ltr" },
+        { name: "The Guardian Music", url: "https://www.theguardian.com/music/rss", lang: "ltr" },
+        { name: "Guitar World", url: "https://www.guitarworld.com/rss.xml", lang: "ltr" }
+      ];
+
+      // ---- עזר קצר ----
+      const $ = (s, r = document) => r.querySelector(s);
+      const grid = $("#grid"), status = $("#status");
+
+      // מצב + טעינת העדפות לפני סנכרון ה־UI (כדי למנוע פליקר)
+      const state = {
+        view: "source", // 'source' | 'combined'
+        perSource: Number(localStorage.getItem("perSource") || 5),
+        combinedCap: Number(localStorage.getItem("combinedCap") || 40),
+        data: null,
+      };
+      const savedView = localStorage.getItem("viewMode");
+      if (savedView === "source" || savedView === "combined") {
+        state.view = savedView;
+      }
+
+      // סנכרון ה־UI לפי מצב קיים
+      $("#perSource").value = String(state.perSource);
+      $("#combinedCap").value = String(state.combinedCap);
+      $("#toggleView").dataset.mode = state.view;
+      $("#toggleView").textContent =
+        "תצוגה: " + (state.view === "combined" ? "משולב" : "לפי מקור");
+
+      function txt(s) {
+        const d = document.createElement("div");
+        d.innerHTML = s || "";
+        return d.textContent || "";
+      }
+      function getDate(n) {
+        return (
+          n.querySelector("pubDate,updated,published,dc\\:date")?.textContent ||
+          ""
+        );
+      }
+      function rel(date) {
+        const d = new Date(date);
+        if (isNaN(d)) return "";
+        const diff = (d - new Date()) / 1000;
+        const abs = Math.abs(diff);
+        const steps = [
+          [60, "seconds"],
+          [60, "minutes"],
+          [24, "hours"],
+          [7, "days"],
+          [4.345, "weeks"],
+          [12, "months"],
+          [1 / 0, "years"],
+        ];
+        let acc = 1, unit = "seconds", val = diff;
+        for (const [s, u] of steps) {
+          if (abs < acc * s) { unit = u; val = diff / acc; break; }
+          acc *= s;
+        }
+        try {
+          return new Intl.RelativeTimeFormat("he-IL", { numeric: "auto" })
+                   .format(Math.round(val), unit);
+        } catch { return ""; }
+      }
+      function icon(u) {
+        try {
+          return "https://www.google.com/s2/favicons?sz=64&domain_url=" + new URL(u).origin;
+        } catch { return ""; }
+      }
+
+      async function fetchFeed(feed, limit) {
+        const url = `https://api.allorigins.win/get?url=${encodeURIComponent(feed.url)}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        const contents = json?.contents || "";
+        if (!contents) return { feed, items: [] }; // הגנה: אין תוכן
+
+        const xml = new DOMParser().parseFromString(contents, "text/xml");
+        if (xml.querySelector("parsererror")) return { feed, items: [] }; // שגיאת פרסר? נחזיר ריק
+
+        const nodes = [...xml.querySelectorAll("item,entry")];
+        const items = nodes
+          .map((n) => {
+            const l = n.querySelector("link")?.getAttribute?.("href")
+                   || n.querySelector("link")?.textContent
+                   || "#";
+            return {
+              title: txt(n.querySelector("title")?.textContent || "(ללא כותרת)"),
+              link: l,
+              desc: txt(n.querySelector("description,summary,content")?.textContent || ""),
+              date: txt(getDate(n)),
+            };
+          })
+          .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+          .slice(0, limit);
+        return { feed, items };
+      }
+
+      function renderSource(data) {
+        grid.innerHTML = "";
+        data.forEach(({ feed, items }) => {
+          const card = document.importNode($("#cardTmpl").content, true);
+          const root = card.querySelector(".card");
+          if (feed.lang === "ltr") root.classList.add("ltr");
+          card.querySelector("img").src = icon(feed.url);
+          card.querySelector(".title").textContent = feed.name;
+          const ul = card.querySelector(".list");
+
+          const limited = items.slice(0, state.perSource);
+          if (!limited.length) {
+            const li = document.createElement("li");
+            li.innerHTML = `<div class="time">אין פריטים להצגה כרגע.</div>`;
+            ul.appendChild(li);
+          } else {
+            limited.forEach((it) => {
+              const li = document.createElement("li");
+              li.innerHTML = `<div><a href="${it.link}" target="_blank" rel="noopener">${it.title}</a></div>
+                              <div class="snip">${it.desc}</div>
+                              <div class="time">${txt(it.date)} · ${rel(it.date)}</div>`;
+              ul.appendChild(li);
+            });
+          }
+
+          grid.appendChild(card);
+        });
+      }
+
+      function renderCombined(data) {
+        grid.innerHTML = "";
+        const card = document.importNode($("#combinedTmpl").content, true);
+        const ul = card.querySelector(".list");
+        const seen = new Set(), out = [];
+        const host = (u) => { try { return new URL(u).host.replace(/^www\./, ""); } catch { return ""; } };
+        const perSrc = {};
+
+        data.forEach(({ feed, items }) => {
+          items.forEach((it) => {
+            perSrc[feed.name] = perSrc[feed.name] || 0;
+            if (perSrc[feed.name] >= state.perSource) return;
+            const key = `${host(it.link)}|${(it.title || "").trim()}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            out.push({ ...it, source: feed.name, lang: feed.lang });
+            perSrc[feed.name]++;
+          });
+        });
+
+        out.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+        out.slice(0, state.combinedCap).forEach((it) => {
+          const li = document.createElement("li");
+          if (it.lang === "ltr") li.classList.add("ltr");
+          li.innerHTML = `<div><span class="src">${it.source}</span><a href="${it.link}" target="_blank" rel="noopener">${it.title}</a></div>
+                          <div class="snip">${it.desc}</div>
+                          <div class="time">${txt(it.date)} · ${rel(it.date)}</div>`;
+          ul.appendChild(li);
+        });
+        grid.appendChild(card);
+      }
+
+      async function load() {
+        status.textContent = "";
+        try {
+          const jobs = feeds.map((f) => fetchFeed(f, state.perSource));
+          const results = await Promise.allSettled(jobs);
+          const ok = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
+          state.data = ok;
+          (state.view === "combined" ? renderCombined : renderSource)(ok);
+          status.textContent = `${ok.length}/${feeds.length} נטענו`;
+        } catch (e) {
+          status.textContent = "שגיאה בטעינת פידים";
+          console.error(e);
+        }
+      }
+
+      // ---- אינטראקציה ----
+      $("#refresh").addEventListener("click", load);
+      $("#toggleSnips").addEventListener("click", (e) => {
+        document.body.classList.toggle("show-snips");
+        e.currentTarget.textContent = document.body.classList.contains("show-snips")
+          ? "הסתר תקצירים"
+          : "הצג תקצירים";
       });
-      dash.appendChild(card);
-    });
-  }
-
-  function renderCombined(results, limit=40){
-    const perSourceCount = {};
-    const all = [];
-    const seen = new Set();
-
-    results.forEach(({feed, items})=>{
-      items.forEach(it=>{
-        perSourceCount[feed.name] = (perSourceCount[feed.name]||0);
-        if (perSourceCount[feed.name] >= perSourceLimit) return;
-        const key = (it.link||'') + '|' + it.title;
-        if(seen.has(key)) return; seen.add(key);
-        all.push({ ...it, source:feed.name, lang:feed.lang });
-        perSourceCount[feed.name]++;
+      $("#toggleView").addEventListener("click", (e) => {
+        state.view = e.currentTarget.dataset.mode === "combined" ? "source" : "combined";
+        e.currentTarget.dataset.mode = state.view;
+        e.currentTarget.textContent = "תצוגה: " + (state.view === "combined" ? "משולב" : "לפי מקור");
+        (state.view === "combined" ? renderCombined : renderSource)(state.data || []);
+        localStorage.setItem("viewMode", state.view);
       });
-    });
+      $("#perSource").addEventListener("change", async () => {
+        state.perSource = Number($("#perSource").value);
+        localStorage.setItem("perSource", String(state.perSource));
+        await load(); // צריך למשוך מחדש כדי להגדיל/להקטין פר מקור
+      });
+      $("#combinedCap").addEventListener("change", () => {
+        state.combinedCap = Number($("#combinedCap").value);
+        localStorage.setItem("combinedCap", String(state.combinedCap));
+        if (state.view === "combined" && state.data) renderCombined(state.data);
+      });
 
-    all.sort((a,b)=> new Date(b.date||0) - new Date(a.date||0));
+      // אם הגיעת כבר עם תקצירים מוצגים, עדכן טקסט כפתור
+      if (document.body.classList.contains("show-snips")) {
+        $("#toggleSnips").textContent = "הסתר תקצירים";
+      }
 
-    const wrap = document.importNode($('#combinedTmpl').content,true);
-    const list = wrap.querySelector('.items');
-    all.slice(0,limit).forEach(it=>{
-      const li = document.createElement('li');
-      if(it.lang==='ltr') li.classList.add('ltr');
-      li.innerHTML = `<div class="title-row"><span class="src-badge">${it.source}</span><a href="${it.link}" target="_blank" rel="noopener">${it.title}</a></div>
-                      <div class="snippet">${it.desc}</div>
-                      <div class="timestamp">${sanitizeHTML(it.date)} · ${relTime(it.date)}</div>`;
-      list.appendChild(li);
-    });
-    dash.prepend(wrap);
-  }
-
-  async function load(){
-    statusBox.innerHTML='';
-    $('#gridToggle').hidden=false;
-
-    const cached = loadCache();
-    if(cached){
-      latestResults = cached.ok;
-      renderSourceCards(latestResults);
-      renderCombined(latestResults);
-      statusBox.innerHTML += `<span class="pill">נטען מהמטמון (עדכון מהיר)</span>`;
-    }
-
-    const t0 = performance.now();
-    const jobs = feeds.map(f => fetchFeed(f).then(
-      res=>({ ok:true, res }), err=>({ ok:false, feed:f, err })
-    ));
-    const settled = await Promise.all(jobs);
-    const ok = settled.filter(x=>x.ok).map(x=>x.res);
-    const fails = settled.filter(x=>!x.ok);
-
-    if(ok.length){
-      latestResults = ok; // נשמור לשימוש חוזר
-      renderSourceCards(ok);
-      renderCombined(ok);
-      saveCache({ ok });
-    }
-
-    const ms = Math.round(performance.now()-t0);
-    statusBox.innerHTML += `<span class="pill">${ok.length}/${feeds.length} נטענו בהצלחה</span>`;
-    statusBox.innerHTML += `<span class="pill">${ms}ms</span>`;
-    if(fails.length){
-      const names = fails.map(f=>f.feed.name).join(', ');
-      statusBox.innerHTML += `<span class="pill error" title="${names}">כשלים: ${fails.length}</span>`;
-      console.warn('Feed failures:', fails);
-    }
-  }
-
-  // ===== אינטראקציה =====
-  $('#refresh').addEventListener('click', ()=>{ localStorage.removeItem(cacheKey); location.reload(); });
-  $('#theme').addEventListener('click', ()=>{ document.body.classList.toggle('light-mode'); document.body.classList.toggle('dark-mode'); });
-  $('#toggleSnips').addEventListener('click', ()=>{ $$('.card').forEach(c=>c.classList.toggle('hidden')); });
-  $('#toggleView').addEventListener('click', (e)=>{
-    const btn = e.currentTarget;
-    const mode = btn.dataset.mode === 'combined' ? 'source' : 'combined';
-    btn.dataset.mode = mode;
-    btn.textContent = 'תצוגה: ' + (mode==='combined'?'משולב':'לפי מקור');
-    window.scrollTo({top:0,behavior:'smooth'});
-  });
-  $('#exportOpml').addEventListener('click', opmlExport);
-
-  // בורר כמות פריטים
-  const limitSelect = $('#limitSelect');
-  // סנכרון ערך התחלתי מהזיכרון
-  limitSelect.value = String(perSourceLimit);
-  limitSelect.addEventListener('change', ()=>{
-    perSourceLimit = Number(limitSelect.value);
-    localStorage.setItem(LIMIT_KEY, String(perSourceLimit));
-    // רנדר מיידי מתוך latestResults אם יש, אחרת טעינה מלאה
-    if(latestResults){
-      renderSourceCards(latestResults);
-      renderCombined(latestResults);
-    } else {
       load();
-    }
-  });
-
-  // ===== הפעלה =====
-  load();
-  </script>
-</body>
+    </script>
+  </body>
 </html>
