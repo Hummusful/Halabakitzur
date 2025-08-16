@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>הלאה בקיצור</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg-color: #121217;
+      --card-color: #1F1F27;
+      --text-color: #EAEAEA;
+      --highlight-color: #FFCC00;
+      --snippet-color: #C2C2C2;
+      --timestamp-color: #888;
+      --btn-color: #D7263D;
+      --btn-hover-color: #F44336;
+    }
+
+    body {
+      background: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 20px;
+      direction: rtl;
+      text-align: right;
+      position: relative;
+      overflow-x: hidden;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    .dark-mode {
+      --bg-color: #121217;
+      --card-color: #1F1F27;
+      --text-color: #EAEAEA;
+      --snippet-color: #C2C2C2;
+      --timestamp-color: #888;
+    }
+
+    .light-mode {
+      --bg-color: #ffffff;
+      --card-color: #f5f5f5;
+      --text-color: #222222;
+      --snippet-color: #444;
+      --timestamp-color: #666;
+    }
+
+    .title {
+      font-size: 3rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 30px;
+      font-family: 'Assistant', sans-serif;
+      letter-spacing: 1px;
+      text-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+      position: relative;
+      z-index: 1;
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .card {
+      background-color: var(--card-color);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeInUp 0.8s ease forwards;
+    }
+
+    @keyframes fadeInUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    h2 {
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #333;
+      padding-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h2 img {
+      height: 20px;
+      width: 20px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    li {
+      margin-bottom: 12px;
+      position: relative;
+      padding-right: 15px;
+    }
+
+    li::before {
+      content: '•';
+      position: absolute;
+      right: 0;
+      color: var(--highlight-color);
+      font-size: 1.2em;
+      line-height: 1;
+    }
+
+    .snippet {
+      font-size: 0.85rem;
+      color: var(--snippet-color);
+      margin-top: 4px;
+      display: none;
+    }
+
+    .timestamp {
+      font-size: 0.75rem;
+      color: var(--timestamp-color);
+      margin-top: 2px;
+    }
+
+    .refresh-btn, .theme-btn {
+      display: inline-block;
+      margin: 0 10px 30px;
+      background-color: var(--btn-color);
+      color: #FFF;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s;
+      position: relative;
+      z-index: 1;
+    }
+
+    .refresh-btn:hover, .theme-btn:hover {
+      background-color: var(--btn-hover-color);
+    }
+
+    .ltr {
+      direction: ltr;
+      text-align: left;
+    }
+
+    .toggle-snippets {
+      display: block;
+      text-align: center;
+      margin-bottom: 20px;
+      color: #ccc;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body class="dark-mode">
+  <h1 class="title">הלאה בקיצור</h1>
+  <div style="text-align: center">
+    <button class="refresh-btn" onclick="location.reload()">רענן</button>
+    <button class="theme-btn" onclick="toggleTheme()">מצב צבע</button>
+  </div>
+  <div class="toggle-snippets" onclick="toggleSnippets()">הצג/הסתר תקצירים</div>
+  <div class="dashboard" id="dashboard"></div>
+
+  <script>
+    const feeds = [
+      { title: 'Ynet', url: 'https://www.ynet.co.il/Integration/StoryRss1854.xml', logo: 'https://www.google.com/s2/favicons?domain=ynet.co.il&sz=64' },
+      { title: 'Mako', url: 'https://rcs.mako.co.il/rss/news-israel.xml', logo: 'https://www.google.com/s2/favicons?domain=mako.co.il&sz=64' },
+      { title: 'TheMarker', url: 'https://www.themarker.com/cmlink/1.4461689', logo: 'https://www.google.com/s2/favicons?domain=themarker.com&sz=64' },
+      { title: 'TMZ', url: 'https://www.tmz.com/rss.xml', ltr: true, logo: 'https://www.google.com/s2/favicons?domain=tmz.com&sz=64' },
+      { title: 'XXL', url: 'https://www.xxlmag.com/feed/', ltr: true, logo: 'https://www.google.com/s2/favicons?domain=xxlmag.com&sz=64' },
+    ];
+
+    function stripHtml(html) {
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+      return temp.textContent || temp.innerText || '';
+    }
+
+    function formatTime(pubDate) {
+      const d = new Date(pubDate);
+      return d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    async function fetchRSS(url) {
+      const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`);
+      const data = await res.json();
+      return data.items.map(item => {
+        const rawSnippet = item.content || item.contentSnippet || item.description || '';
+        const cleanSnippet = stripHtml(rawSnippet);
+        return { ...item, contentSnippet: cleanSnippet };
+      }).slice(0, 3);
+    }
+
+    function toggleSnippets() {
+      document.querySelectorAll('.snippet').forEach(snippet => {
+        snippet.style.display = snippet.style.display === 'none' ? 'block' : 'none';
+      });
+    }
+
+    function toggleTheme() {
+      const body = document.body;
+      if (body.classList.contains('dark-mode')) {
+        body.classList.remove('dark-mode');
+        body.classList.add('light-mode');
+      } else {
+        body.classList.remove('light-mode');
+        body.classList.add('dark-mode');
+      }
+    }
+
+    async function loadDashboard() {
+      const container = document.getElementById('dashboard');
+      container.innerHTML = '';
+      for (const feed of feeds) {
+        try {
+          const items = await fetchRSS(feed.url);
+          const card = document.createElement('div');
+          card.className = 'card';
+          if (feed.ltr) card.classList.add('ltr');
+
+          const title = document.createElement('h2');
+          if (feed.logo) {
+            const img = document.createElement('img');
+            img.src = feed.logo;
+            img.alt = feed.title;
+            title.appendChild(img);
+          }
+          title.appendChild(document.createTextNode(feed.title));
+          card.appendChild(title);
+
+          const list = document.createElement('ul');
+          items.forEach(item => {
+            const li = document.createElement('li');
+
+            const a = document.createElement('a');
+            a.href = item.link;
+            a.textContent = item.title;
+            a.style.color = '#FFCC00';
+            a.target = '_blank';
+            li.appendChild(a);
+
+            if (item.contentSnippet) {
+              const snippet = document.createElement('div');
+              snippet.className = 'snippet';
+              snippet.textContent = item.contentSnippet;
+              li.appendChild(snippet);
+            }
+
+            if (item.pubDate) {
+              const time = document.createElement('div');
+              time.className = 'timestamp';
+              time.textContent = `⏱ ${formatTime(item.pubDate)}`;
+              li.appendChild(time);
+            }
+
+            list.appendChild(li);
+          });
+
+          card.appendChild(list);
+          container.appendChild(card);
+        } catch (e) {
+          console.error(`שגיאה בטעינת הפיד של ${feed.title}`, e);
+        }
+      }
+    }
+
+    loadDashboard();
+    setInterval(() => location.reload(), 600000);
+  </script>
+</body>
+</html>
