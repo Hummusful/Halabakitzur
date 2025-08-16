@@ -16,6 +16,7 @@
     .btn:hover{background:var(--btn-hover-color)}
     .btn:active{transform:translateY(1px)}
     .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--text-color)}
+    select.btn{appearance:none;padding-right:12px;padding-left:30px;cursor:pointer}
     .dashboard{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px}
     .card{background:var(--card-color);border:1px solid rgba(255,255,255,.05);border-radius:14px;padding:16px;box-shadow:0 0 12px rgba(0,0,0,.35);opacity:0;transform:translateY(12px);animation:fadeUp .6s ease forwards}
     @keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
@@ -50,7 +51,12 @@
     <button class="btn" id="refresh">רענן</button>
     <button class="btn" id="theme">מצב צבע</button>
     <button class="btn" id="toggleSnips">הצג/הסתר תקצירים</button>
-    <button class="btn secondary" id="toggleView" title="תצוגה משולבת/לפי מקור">תצוגה: לפי מקור</button>
+    <button class="btn secondary" id="toggleView" title="תצוגה משולבת/לפי מקור" data-mode="source">תצוגה: לפי מקור</button>
+    <select class="btn secondary" id="limitSelect" title="כמה פריטים לכל מקור">
+      <option value="3">3 לפר מקור</option>
+      <option value="5">5 לפר מקור</option>
+      <option value="10">10 לפר מקור</option>
+    </select>
     <button class="btn secondary" id="exportOpml">ייצוא OPML</button>
   </div>
 
@@ -105,17 +111,22 @@
     { name:"BBC Music", url:"http://feeds.bbci.co.uk/music/rss.xml", lang:"ltr" }
   ];
 
-  // ===== עזר =====
+  // ===== קבועים / מצב =====
   const $ = (sel, root=document) => root.querySelector(sel);
   const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
   const statusBox = $('#status');
   const dash = $('#dashboard');
   const cacheKey = 'musicFeedsCache.v2';
+  const LIMIT_KEY = 'perSourceLimit';
+
+  // קריאה מה-LocalStorage עם ברירת מחדל 5
+  let perSourceLimit = Number(localStorage.getItem(LIMIT_KEY) || 5);
+  // נשמור את התוצאות האחרונות כדי שנוכל לרנדר מחדש מיידית כשמשנים את הבורר
+  let latestResults = null;
 
   function sanitizeHTML(str){
     const div=document.createElement('div');
-    div.innerHTML=str||'';
-    return div.textContent||div.innerText||'';
+    div.innerHTML=str||''; return div.textContent||div.innerText||'';
   }
 
   function relTime(date){
@@ -123,11 +134,10 @@
       const d = new Date(date);
       if(isNaN(d)) return '';
       const rtf = new Intl.RelativeTimeFormat('he-IL', { numeric:'auto' });
-      const diff = (d - new Date())/1000; // seconds
+      const diff = (d - new Date())/1000;
       const abs = Math.abs(diff);
       const map = [ [60,'seconds'], [60,'minutes'], [24,'hours'], [7,'days'], [4.345,'weeks'], [12,'months'], [Number.POSITIVE_INFINITY,'years'] ];
-      let unit='seconds', value=diff;
-      let acc=1;
+      let unit='seconds', value=diff, acc=1;
       for(const [step,u] of map){
         if(abs<acc*step){ unit=u; value=diff/acc; break; }
         acc*=step;
@@ -147,7 +157,6 @@
   }
 
   function parseItems(xmlDoc){
-    // Supports RSS <item> and Atom <entry>
     const items = xmlDoc.querySelectorAll('item, entry');
     return [...items].map(n => {
       const link = n.querySelector('link')?.getAttribute?.('href') || n.querySelector('link')?.textContent || '#';
@@ -168,9 +177,7 @@
     const end = `</body></opml>`;
     const blob = new Blob([head+body+end], { type:'text/xml' });
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'music-feeds.opml';
-    a.click();
+    a.href = URL.createObjectURL(blob); a.download = 'music-feeds.opml'; a.click();
   }
 
   async function fetchFeed(feed){
@@ -180,13 +187,15 @@
     const { contents } = await res.json();
     const xml = new DOMParser().parseFromString(contents,'text/xml');
     if(xml.querySelector('parsererror')) throw new Error('Parser error');
-    const items = parseItems(xml);
+
+    const items = parseItems(xml)
+      .sort((a,b)=> new Date(b.date||0) - new Date(a.date||0))
+      .slice(0, perSourceLimit); // שימוש בהעדפה הנוכחית
+
     return { feed, items };
   }
 
-  function saveCache(data){
-    try{ localStorage.setItem(cacheKey, JSON.stringify({ t:Date.now(), data })) }catch{}
-  }
+  function saveCache(data){ try{ localStorage.setItem(cacheKey, JSON.stringify({ t:Date.now(), data })) }catch{} }
   function loadCache(maxAgeMs=10*60*1000){
     try{
       const raw = localStorage.getItem(cacheKey);
@@ -200,19 +209,17 @@
   function renderSourceCards(results){
     dash.innerHTML='';
     results.forEach(({feed, items}) => {
+      items = items.slice(0, perSourceLimit); // הגנה נוספת
       const card = document.importNode($('#cardTmpl').content,true);
       const root = card.querySelector('.card');
       if(feed.lang==='ltr') root.classList.add('ltr');
       root.querySelector('img').src = favicon(feed.url);
       root.querySelector('.feed-title').textContent = feed.name;
       const list = root.querySelector('.items');
-      const top = items.slice(0,5);
-      if(!top.length){
-        const p=document.createElement('p');
-        p.className='small'; p.textContent='אין פריטים להצגה כרגע.';
-        root.appendChild(p);
+      if(!items.length){
+        const p=document.createElement('p'); p.className='small'; p.textContent='אין פריטים להצגה כרגע.'; root.appendChild(p);
       }
-      top.forEach(it=>{
+      items.forEach(it=>{
         const li=document.createElement('li');
         li.innerHTML = `<div class="title-row"><a href="${it.link}" target="_blank" rel="noopener">${it.title}</a></div>
                         <div class="snippet">${it.desc}</div>
@@ -224,15 +231,21 @@
   }
 
   function renderCombined(results, limit=40){
+    const perSourceCount = {};
     const all = [];
     const seen = new Set();
+
     results.forEach(({feed, items})=>{
       items.forEach(it=>{
+        perSourceCount[feed.name] = (perSourceCount[feed.name]||0);
+        if (perSourceCount[feed.name] >= perSourceLimit) return;
         const key = (it.link||'') + '|' + it.title;
         if(seen.has(key)) return; seen.add(key);
         all.push({ ...it, source:feed.name, lang:feed.lang });
+        perSourceCount[feed.name]++;
       });
     });
+
     all.sort((a,b)=> new Date(b.date||0) - new Date(a.date||0));
 
     const wrap = document.importNode($('#combinedTmpl').content,true);
@@ -254,22 +267,22 @@
 
     const cached = loadCache();
     if(cached){
-      renderSourceCards(cached.ok);
-      renderCombined(cached.ok);
+      latestResults = cached.ok;
+      renderSourceCards(latestResults);
+      renderCombined(latestResults);
       statusBox.innerHTML += `<span class="pill">נטען מהמטמון (עדכון מהיר)</span>`;
     }
 
     const t0 = performance.now();
     const jobs = feeds.map(f => fetchFeed(f).then(
-      res=>({ ok:true, res }),
-      err=>({ ok:false, feed:f, err })
+      res=>({ ok:true, res }), err=>({ ok:false, feed:f, err })
     ));
     const settled = await Promise.all(jobs);
-
     const ok = settled.filter(x=>x.ok).map(x=>x.res);
     const fails = settled.filter(x=>!x.ok);
 
     if(ok.length){
+      latestResults = ok; // נשמור לשימוש חוזר
       renderSourceCards(ok);
       renderCombined(ok);
       saveCache({ ok });
@@ -286,41 +299,32 @@
   }
 
   // ===== אינטראקציה =====
-  $('#refresh').addEventListener('click', ()=>{
-    localStorage.removeItem(cacheKey); location.reload();
-  });
-  $('#theme').addEventListener('click', ()=>{
-    document.body.classList.toggle('light-mode');
-    document.body.classList.toggle('dark-mode');
-  });
-  $('#toggleSnips').addEventListener('click', ()=>{
-    $$('.card').forEach(c=>c.classList.toggle('hidden'));
-  });
+  $('#refresh').addEventListener('click', ()=>{ localStorage.removeItem(cacheKey); location.reload(); });
+  $('#theme').addEventListener('click', ()=>{ document.body.classList.toggle('light-mode'); document.body.classList.toggle('dark-mode'); });
+  $('#toggleSnips').addEventListener('click', ()=>{ $$('.card').forEach(c=>c.classList.toggle('hidden')); });
   $('#toggleView').addEventListener('click', (e)=>{
     const btn = e.currentTarget;
     const mode = btn.dataset.mode === 'combined' ? 'source' : 'combined';
     btn.dataset.mode = mode;
     btn.textContent = 'תצוגה: ' + (mode==='combined'?'משולב':'לפי מקור');
-    dash.classList.toggle('show-combined');
-    // פשוט מגלגל לראש ומציג את הכרטיס המשולב שכבר נוצר
     window.scrollTo({top:0,behavior:'smooth'});
   });
   $('#exportOpml').addEventListener('click', opmlExport);
 
-  $$('#gridToggle .toggle').forEach(t=>{
-    t.addEventListener('click', (e)=>{
-      $$('#gridToggle .toggle').forEach(x=>x.classList.remove('active'));
-      e.currentTarget.classList.add('active');
-      const mode = e.currentTarget.dataset.mode;
-      if(mode==='combined'){
-        // מבטיח שהמשולב קיים בראש
-        const combined = $('.combined');
-        if(combined) combined.scrollIntoView({behavior:'smooth'});
-      } else {
-        const topCard = $('.card');
-        if(topCard) topCard.scrollIntoView({behavior:'smooth'});
-      }
-    });
+  // בורר כמות פריטים
+  const limitSelect = $('#limitSelect');
+  // סנכרון ערך התחלתי מהזיכרון
+  limitSelect.value = String(perSourceLimit);
+  limitSelect.addEventListener('change', ()=>{
+    perSourceLimit = Number(limitSelect.value);
+    localStorage.setItem(LIMIT_KEY, String(perSourceLimit));
+    // רנדר מיידי מתוך latestResults אם יש, אחרת טעינה מלאה
+    if(latestResults){
+      renderSourceCards(latestResults);
+      renderCombined(latestResults);
+    } else {
+      load();
+    }
   });
 
   // ===== הפעלה =====
