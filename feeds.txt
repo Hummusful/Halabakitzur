@@ -3,3 +3,4 @@ https://www.xxlmag.com/feed/
 https://rss.walla.co.il/feed/272
 https://pitchfork.com/rss/news/
 https://feeds.npr.org/1039/rss.xml
+https://thedailymusicreport.com/feed/
