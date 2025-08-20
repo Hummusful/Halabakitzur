@@ -16,6 +16,7 @@
         --link: #8be9fd;
         --link-hover: #ffffff;
         --link-visited: #b6a1ff;
+        --loader: #ffcc00; /* צבע חדש לספינר */
       }
       /* מצב בהיר */
       .light {
@@ -29,6 +30,7 @@
         --link: #1a73e8;
         --link-hover: #0b57d0;
         --link-visited: #6f42c1;
+        --loader: #0d6efd;
       }
 
       body {
@@ -70,11 +72,31 @@
       ul { list-style: none; margin: 0; padding: 0; }
       li { padding-right: 14px; position: relative; margin: 0 0 10px; }
       li::before { content: "•"; position: absolute; right: 0; color: var(--acc); }
-      .src { font-size: 0.72rem; background: #00000014; padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
+      .src { font-size: 0.72rem; background: #00000014; padding: 2px 8px; border-radius: 999px; margin-left: 6px; display: inline-flex; align-items: center; gap: 4px; }
+      .src img { width: 16px; height: 16px; border-radius: 3px; }
       .time { font-size: 0.8rem; opacity: 0.7; margin-top: 4px; }
       .snip { display: none; font-size: 0.9rem; opacity: 0.8; margin-top: 4px; }
       body.show-snips .snip { display: block; }
       .ltr { direction: ltr; text-align: left; }
+
+      /* סגנון למצב טעינה */
+      .loader {
+        border: 4px solid #fff3;
+        border-top: 4px solid var(--loader);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+        display: none;
+      }
+      body.loading .loader {
+        display: block;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
     </style>
   </head>
   <body>
@@ -86,14 +108,15 @@
         <button class="btn" id="toggleSnips">הצג תקצירים</button>
         <button class="btn secondary" id="toggleView" data-mode="source">תצוגה: לפי מקור</button>
         <select class="secondary" id="perSource">
-          <option value="3">3 לפר מקור</option>
-          <option value="5" selected>5 לפר מקור</option>
-          <option value="10">10 לפר מקור</option>
+          <option value="3">3 פריטים לכל מקור</option>
+          <option value="5" selected>5 פריטים לכל מקור</option>
+          <option value="10">10 פריטים לכל מקור</option>
         </select>
         <button class="btn" id="themeToggle" title="כהה/בהיר">מצב כהה/בהיר</button>
       </div>
 
       <div id="status"></div>
+      <div class="loader" id="loader"></div>
       <div class="grid" id="grid"></div>
 
       <template id="cardTmpl">
@@ -107,7 +130,7 @@
         <div class="card">
           <h2>כותרות אחרונות (משולב)</h2>
           <ul class="list"></ul>
-          <div class="time">ממויין לפי זמן הפרסום (חדש לישן)</div>
+          <div class="time">ממוין לפי זמן פרסום (מהחדש לישן)</div>
         </div>
       </template>
     </div>
@@ -116,19 +139,17 @@
       // ===== הגדרות =====
       const feeds = [
         { name: "Mako-Music", url: "https://rcs.mako.co.il/rss/f6750a2610f26110VgnVCM1000005201000aRCRD.xml", lang: "rtl" },
-        { name: "Ynet – תרבות", url: "https://www.ynet.co.il/Integration/StoryRss1854.xml", lang: "rtl" },
-        { name: "XXL (Hip-Hop)", url: "https://www.xxlmag.com/feed/", lang: "ltr" },
         { name: "Walla תרבות", url: "https://rss.walla.co.il/feed/272", lang: "rtl" },
+        { name: "XXL (Hip-Hop)", url: "https://www.xxlmag.com/feed/", lang: "ltr" },
         { name: "Pitchfork News", url: "https://pitchfork.com/rss/news/", lang: "ltr" },
         {name: "NPR Music", url: "https://feeds.npr.org/1039/rss.xml", lang: "ltr" }
-                
       ];
       const CORS_PROXY = (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`;
       const CACHE_TTL = 15 * 60 * 1000; // 15 דקות
 
       // ===== עזרים קצרים =====
       const $ = (s, r = document) => r.querySelector(s);
-      const grid = $("#grid"), status = $("#status");
+      const grid = $("#grid"), status = $("#status"), loader = $("#loader");
       const jget = (k, d=null) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
       const jset = (k, v) => localStorage.setItem(k, JSON.stringify(v));
       const key = (prefix, id) => `${prefix}:${id}`;
@@ -173,10 +194,6 @@
       }
 
       async function fetchFeed(feed) {
-        // ניסיון מטמון
-        const cached = readCache(feed);
-        if (cached) return { feed, items: cached, cached: true };
-
         // שליפה מהאינטרנט
         const res = await fetch(CORS_PROXY(feed.url));
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -189,12 +206,16 @@
 
         const nodes = [...xml.querySelectorAll("item,entry")];
         const items = nodes.map((n) => {
-            const l = n.querySelector("link")?.getAttribute?.("href") || n.querySelector("link")?.textContent || "#";
-            const date = n.querySelector("pubDate,updated,published,dc\\:date")?.textContent || "";
+            const title = n.querySelector("title")?.textContent;
+            const linkNode = n.querySelector("link");
+            const link = linkNode?.getAttribute("href") || linkNode?.textContent || "#";
+            const desc = n.querySelector("description,summary,content")?.textContent;
+            const date = n.querySelector("pubDate,updated,published,dc\\:date")?.textContent;
             return {
-              title: txt(n.querySelector("title")?.textContent || "(ללא כותרת)"),
-              link: l, desc: txt(n.querySelector("description,summary,content")?.textContent || ""),
-              date: txt(date),
+              title: txt(title || "(ללא כותרת)"),
+              link: link,
+              desc: txt(desc || ""),
+              date: txt(date || ""),
             };
           })
           .sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
@@ -253,7 +274,7 @@
             const key = `${host(it.link)}|${(it.title || "").trim()}`;
             if (seen.has(key)) continue;
             seen.add(key);
-            out.push({ ...it, source: feed.name, lang: feed.lang });
+            out.push({ ...it, source: feed.name, lang: feed.lang, sourceIcon: icon(feed.url) });
             perSrc[feed.name]++;
           }
         }
@@ -263,7 +284,7 @@
         for (const it of out) {
           const li = document.createElement("li");
           if (it.lang === "ltr") li.classList.add("ltr");
-          li.innerHTML = `<div><span class="src">${it.source}</span>
+          li.innerHTML = `<div><span class="src"><img src="${it.sourceIcon}" alt=""/>${it.source}</span>
                             <a href="${it.link}" target="_blank" rel="noopener">${it.title}</a></div>
                           <div class="snip">${it.desc}</div>
                           <div class="time">${txt(it.date)} · ${rel(it.date)}</div>`;
@@ -275,9 +296,11 @@
 
       // ===== זרימת טעינה =====
       async function load() {
+        document.body.classList.add("loading");
         status.textContent = "";
+
         try {
-          // 1) נסה להציג מיד מהמטמון (אם קיים לכל הפחות למקור אחד)
+          // 1) נסה להציג מיד מהמטמון
           const cachedResults = feeds.map((f) => {
             const items = readCache(f);
             return items ? { feed: f, items, cached: true } : null;
@@ -286,7 +309,9 @@
           if (cachedResults.length) {
             state.data = cachedResults;
             (state.view === "combined" ? renderCombined : renderSource)(cachedResults);
-            status.textContent = `${cachedResults.length}/${feeds.length} מהמטמון · מרענן...`;
+            status.textContent = ` ${cachedResults.length}/${feeds.length} נטענו מהמטמון. מרענן מהרשת...`;
+          } else {
+             status.textContent = `טוען נתונים...`;
           }
 
           // 2) שליפה מלאה (מעדכנת מטמון ומרנדרת סופית)
@@ -295,10 +320,12 @@
           state.data = ok;
           (state.view === "combined" ? renderCombined : renderSource)(ok);
           const cachedCount = ok.filter(x => x.cached).length;
-          status.textContent = `${ok.length}/${feeds.length} נטענו${cachedCount ? ` (${cachedCount} מהמטמון)` : ""}`;
+          status.textContent = `${ok.length}/${feeds.length} נטענו בהצלחה`;
         } catch (e) {
           status.textContent = "שגיאה בטעינת פידים";
           console.error(e);
+        } finally {
+          document.body.classList.remove("loading");
         }
       }
 
@@ -332,6 +359,7 @@
       }
 
       load();
+      // Logginoff;
     </script>
   </body>
 </html>
