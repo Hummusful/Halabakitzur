@@ -1,5 +1,4 @@
 https://rcs.mako.co.il/rss/f6750a2610f26110VgnVCM1000005201000aRCRD.xml
-https://www.ynet.co.il/Integration/StoryRss1854.xml
 https://www.xxlmag.com/feed/
 https://rss.walla.co.il/feed/272
 https://pitchfork.com/rss/news/
