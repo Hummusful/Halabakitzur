@@ -3,18 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>הלאה בקיצר – מוזיקה (Lite)</title>
+    <title>הלאה בקיצר – מוזיקה </title>
     <style>
       :root {
         --bg: #121217;
         --card: #1f1f27;
         --txt: #eaeaea;
-        --acc: #ffcc00;      /* נקודת דגש לכדורים • וכד' */
+        --acc: #ffcc00; /* נקודת דגש לכדורים • וכד' */
         --muted: #2a2a35;
         --btn: #d7263d;
         --btnh: #f44336;
         /* צבעי קישורים – קריאים מאוד על רקע כהה */
-        --link: #8be9fd;     /* תכלת-ציאן בהיר (קריא על שחור) */
+        --link: #8be9fd; /* תכלת-ציאן בהיר (קריא על שחור) */
         --link-hover: #ffffff;
         --link-visited: #b6a1ff; /* אופציונלי – סגול בהיר לביקור */
       }
@@ -190,19 +190,37 @@
 
     <script>
       const feeds = [
-        { name: "Mako-Music", url: "https://rcs.mako.co.il/rss/f6750a2610f26110VgnVCM1000005201000aRCRD.xml", lang: "rtl" },
-        { name: "Trancentral", url: "https://www.trancentral.tv/feed/", lang: "ltr" },
-        { name: "Ynet – תרבות", url: "https://www.ynet.co.il/Integration/StoryRss1854.xml", lang: "rtl" },
-        { name: "XXL (Hip-Hop)", url: "https://www.xxlmag.com/feed/", lang: "ltr" },
-        { name: "Walla תרבות", url: "https://rss.walla.co.il/feed/272", lang: "rtl" },
-        { name: "Pitchfork News", url: "https://pitchfork.com/rss/news/", lang: "ltr" },
-        { name: "The Guardian Music", url: "https://www.theguardian.com/music/rss", lang: "ltr" },
-        { name: "Guitar World", url: "https://www.guitarworld.com/rss.xml", lang: "ltr" }
+        {
+          name: "Mako-Music",
+          url: "https://rcs.mako.co.il/rss/f6750a2610f26110VgnVCM1000005201000aRCRD.xml",
+          lang: "rtl",
+        },
+        {
+          name: "Ynet – תרבות",
+          url: "https://www.ynet.co.il/Integration/StoryRss1854.xml",
+          lang: "rtl",
+        },
+        {
+          name: "XXL (Hip-Hop)",
+          url: "https://www.xxlmag.com/feed/",
+          lang: "ltr",
+        },
+        {
+          name: "Walla תרבות",
+          url: "https://rss.walla.co.il/feed/272",
+          lang: "rtl",
+        },
+        {
+          name: "Pitchfork News",
+          url: "https://pitchfork.com/rss/news/",
+          lang: "ltr",
+        },
       ];
 
       // ---- עזר קצר ----
       const $ = (s, r = document) => r.querySelector(s);
-      const grid = $("#grid"), status = $("#status");
+      const grid = $("#grid"),
+        status = $("#status");
 
       // מצב + טעינת העדפות לפני סנכרון ה־UI (כדי למנוע פליקר)
       const state = {
@@ -248,24 +266,40 @@
           [12, "months"],
           [1 / 0, "years"],
         ];
-        let acc = 1, unit = "seconds", val = diff;
+        let acc = 1,
+          unit = "seconds",
+          val = diff;
         for (const [s, u] of steps) {
-          if (abs < acc * s) { unit = u; val = diff / acc; break; }
+          if (abs < acc * s) {
+            unit = u;
+            val = diff / acc;
+            break;
+          }
           acc *= s;
         }
         try {
-          return new Intl.RelativeTimeFormat("he-IL", { numeric: "auto" })
-                   .format(Math.round(val), unit);
-        } catch { return ""; }
+          return new Intl.RelativeTimeFormat("he-IL", {
+            numeric: "auto",
+          }).format(Math.round(val), unit);
+        } catch {
+          return "";
+        }
       }
       function icon(u) {
         try {
-          return "https://www.google.com/s2/favicons?sz=64&domain_url=" + new URL(u).origin;
-        } catch { return ""; }
+          return (
+            "https://www.google.com/s2/favicons?sz=64&domain_url=" +
+            new URL(u).origin
+          );
+        } catch {
+          return "";
+        }
       }
 
       async function fetchFeed(feed, limit) {
-        const url = `https://api.allorigins.win/get?url=${encodeURIComponent(feed.url)}`;
+        const url = `https://api.allorigins.win/get?url=${encodeURIComponent(
+          feed.url
+        )}`;
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
@@ -278,13 +312,19 @@
         const nodes = [...xml.querySelectorAll("item,entry")];
         const items = nodes
           .map((n) => {
-            const l = n.querySelector("link")?.getAttribute?.("href")
-                   || n.querySelector("link")?.textContent
-                   || "#";
+            const l =
+              n.querySelector("link")?.getAttribute?.("href") ||
+              n.querySelector("link")?.textContent ||
+              "#";
             return {
-              title: txt(n.querySelector("title")?.textContent || "(ללא כותרת)"),
+              title: txt(
+                n.querySelector("title")?.textContent || "(ללא כותרת)"
+              ),
               link: l,
-              desc: txt(n.querySelector("description,summary,content")?.textContent || ""),
+              desc: txt(
+                n.querySelector("description,summary,content")?.textContent ||
+                  ""
+              ),
               date: txt(getDate(n)),
             };
           })
@@ -311,9 +351,13 @@
           } else {
             limited.forEach((it) => {
               const li = document.createElement("li");
-              li.innerHTML = `<div><a href="${it.link}" target="_blank" rel="noopener">${it.title}</a></div>
+              li.innerHTML = `<div><a href="${
+                it.link
+              }" target="_blank" rel="noopener">${it.title}</a></div>
                               <div class="snip">${it.desc}</div>
-                              <div class="time">${txt(it.date)} · ${rel(it.date)}</div>`;
+                              <div class="time">${txt(it.date)} · ${rel(
+                it.date
+              )}</div>`;
               ul.appendChild(li);
             });
           }
@@ -326,8 +370,15 @@
         grid.innerHTML = "";
         const card = document.importNode($("#combinedTmpl").content, true);
         const ul = card.querySelector(".list");
-        const seen = new Set(), out = [];
-        const host = (u) => { try { return new URL(u).host.replace(/^www\./, ""); } catch { return ""; } };
+        const seen = new Set(),
+          out = [];
+        const host = (u) => {
+          try {
+            return new URL(u).host.replace(/^www\./, "");
+          } catch {
+            return "";
+          }
+        };
         const perSrc = {};
 
         data.forEach(({ feed, items }) => {
@@ -346,9 +397,13 @@
         out.slice(0, state.combinedCap).forEach((it) => {
           const li = document.createElement("li");
           if (it.lang === "ltr") li.classList.add("ltr");
-          li.innerHTML = `<div><span class="src">${it.source}</span><a href="${it.link}" target="_blank" rel="noopener">${it.title}</a></div>
+          li.innerHTML = `<div><span class="src">${it.source}</span><a href="${
+            it.link
+          }" target="_blank" rel="noopener">${it.title}</a></div>
                           <div class="snip">${it.desc}</div>
-                          <div class="time">${txt(it.date)} · ${rel(it.date)}</div>`;
+                          <div class="time">${txt(it.date)} · ${rel(
+            it.date
+          )}</div>`;
           ul.appendChild(li);
         });
         grid.appendChild(card);
@@ -359,7 +414,9 @@
         try {
           const jobs = feeds.map((f) => fetchFeed(f, state.perSource));
           const results = await Promise.allSettled(jobs);
-          const ok = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
+          const ok = results
+            .filter((r) => r.status === "fulfilled")
+            .map((r) => r.value);
           state.data = ok;
           (state.view === "combined" ? renderCombined : renderSource)(ok);
           status.textContent = `${ok.length}/${feeds.length} נטענו`;
@@ -373,15 +430,21 @@
       $("#refresh").addEventListener("click", load);
       $("#toggleSnips").addEventListener("click", (e) => {
         document.body.classList.toggle("show-snips");
-        e.currentTarget.textContent = document.body.classList.contains("show-snips")
+        e.currentTarget.textContent = document.body.classList.contains(
+          "show-snips"
+        )
           ? "הסתר תקצירים"
           : "הצג תקצירים";
       });
       $("#toggleView").addEventListener("click", (e) => {
-        state.view = e.currentTarget.dataset.mode === "combined" ? "source" : "combined";
+        state.view =
+          e.currentTarget.dataset.mode === "combined" ? "source" : "combined";
         e.currentTarget.dataset.mode = state.view;
-        e.currentTarget.textContent = "תצוגה: " + (state.view === "combined" ? "משולב" : "לפי מקור");
-        (state.view === "combined" ? renderCombined : renderSource)(state.data || []);
+        e.currentTarget.textContent =
+          "תצוגה: " + (state.view === "combined" ? "משולב" : "לפי מקור");
+        (state.view === "combined" ? renderCombined : renderSource)(
+          state.data || []
+        );
         localStorage.setItem("viewMode", state.view);
       });
       $("#perSource").addEventListener("change", async () => {
