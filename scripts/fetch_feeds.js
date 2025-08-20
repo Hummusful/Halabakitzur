@@ -1,92 +1,127 @@
-// דרישות: node18+ (יש ב-GitHub Actions)
+// Node 18+ (ב־GitHub Actions יש Node 20) – ESM נתמך. להריץ: `node scripts/fetch_feeds.js`
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 
-// פונקציית timeout ל-fetch
-async function fetchWithTimeout(url, ms = 8000) {
+// === הגדרות ===
+const INPUT_LIST = resolve("feeds.txt");
+const OUT_DIR = resolve("data");
+const OUT_FILE = resolve("data/feeds.json");
+const CONCURRENCY = 6;             // אל תעלה – דפדפנים/פרוקסי מוגבלים בכל מקרה
+const TIMEOUT_MS = 9000;           // timeout לבקשה
+const RETRIES = 1;                 // רה־טריי אחד
+const PER_FEED_LIMIT = 40;         // כמה פריטים להשאיר מכל פיד לפני האיחוד
+const GLOBAL_LIMIT = 400;          // כמה פריטים בסה״כ בקובץ המוגמר
+const USER_AGENT = "RSS-Aggregator/1.0 (+github-actions; contact=maintainer@example)";
+
+// === עזרים ===
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const stripHtml = (s="") => s.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+const decodeEntities = (s="") => s
+  .replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">")
+  .replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+
+async function fetchWithTimeout(url, { timeout = TIMEOUT_MS, headers = {} } = {}) {
   const ctrl = new AbortController();
-  const id = setTimeout(() => ctrl.abort(), ms);
+  const id = setTimeout(() => ctrl.abort(), timeout);
   try {
-    const res = await fetch(url, { signal: ctrl.signal, headers: { "User-Agent": "RSS-Aggregator/1.0 (+github)" } });
+    const res = await fetch(url, { signal: ctrl.signal, headers: { 'User-Agent': USER_AGENT, ...headers } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.text();
-  } finally {
-    clearTimeout(id);
-  }
+  } finally { clearTimeout(id); }
 }
 
-// פרסינג XML -> אובייקטים פשוטים, בלי חצי עולם של ספריות:
-// טריק פשוט: מושכים כותרות/לינקים/תאריכים עם regex בסיסי (עובד טוב לרוב הפידים)
-// אם תרצה דיוק/שדות מתקדמים, אפשר לעבור לגרסה עם ספרייה כמו fast-xml-parser.
-function parseBasicRSS(xml) {
-  const items = [];
-  // RSS
-  const rssItems = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
-  for (const block of rssItems) {
-    const get = (tag) => (block.match(new RegExp(`<${tag}.*?>([\\s\\S]*?)<\\/${tag}>`, "i")) || [,""])[1].trim();
-    items.push({
-      title: decode(get("title")),
-      link: decode(get("link")),
-      pubDate: decode(get("pubDate")) || decode(get("dc:date")) || "",
-      summary: stripHtml(decode(get("description"))).slice(0, 280)
+async function tryFetch(url) {
+  let lastErr;
+  for (let i=0; i<=RETRIES; i++) {
+    try {
+      return await fetchWithTimeout(url);
+    } catch (e) {
+      lastErr = e;
+      if (i < RETRIES) await sleep(500 + i*500);
+    }
+  }
+  throw lastErr;
+}
+
+function parseXmlItems(xml) {
+  // החילוץ מינימלי ועובד טוב לרוב ה־RSS/Atom
+  const out = [];
+  // RSS <item>
+  const items = xml.match(/<item[\s\S]*?<\/item>/gi) || [];
+  for (const block of items) {
+    const get = (tag) => (block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\/${tag}>`, "i")) || [,''])[1];
+    const encUrl = (block.match(/<enclosure[^>]*url="([^"]+)"[^>]*>/i) || [,''])[1];
+    const mContent = (block.match(/<media:content[^>]*url="([^"]+)"[^>]*>/i) || [,''])[1];
+    out.push({
+      title: decodeEntities(stripHtml(get('title')) || '(ללא כותרת)'),
+      link: decodeEntities(stripHtml(get('link'))) || decodeEntities(stripHtml(get('guid'))) || '#',
+      pubDate: decodeEntities(stripHtml(get('pubDate')||get('dc:date')||'')),
+      summary: decodeEntities(stripHtml(get('description')||'')),
+      image: mContent || encUrl || ''
     });
   }
-  // ATOM
-  const atomEntries = xml.match(/<entry>[\s\S]*?<\/entry>/g) || [];
-  for (const block of atomEntries) {
-    const get = (tag) => (block.match(new RegExp(`<${tag}.*?>([\\s\\S]*?)<\\/${tag}>`, "i")) || [,""])[1].trim();
-    const linkHref = (block.match(/<link[^>]*?href="([^"]+)"/i) || [,""])[1];
-    items.push({
-      title: decode(get("title")),
-      link: decode(linkHref || get("id")),
-      pubDate: decode(get("updated")) || decode(get("published")) || "",
-      summary: stripHtml(decode(get("summary")) || decode(get("content"))).slice(0, 280)
+  // Atom <entry>
+  const entries = xml.match(/<entry[\s\S]*?<\/entry>/gi) || [];
+  for (const block of entries) {
+    const get = (tag) => (block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\/${tag}>`, "i")) || [,''])[1];
+    const href = (block.match(/<link[^>]*?href="([^"]+)"/i) || [,''])[1];
+    const mContent = (block.match(/<media:content[^>]*url="([^"]+)"[^>]*>/i) || [,''])[1];
+    out.push({
+      title: decodeEntities(stripHtml(get('title')) || '(ללא כותרת)'),
+      link: decodeEntities(stripHtml(href || get('id') || '#')),
+      pubDate: decodeEntities(stripHtml(get('updated')||get('published')||'')),
+      summary: decodeEntities(stripHtml(get('summary')||get('content')||'')),
+      image: mContent || ''
     });
   }
+  return out;
+}
+
+function normalizeDate(s) { const d = new Date(s); return isNaN(d) ? 0 : d.getTime(); }
+function host(u) { try { return new URL(u).host.replace(/^www\./,''); } catch { return ''; } }
+
+async function fetchFeed(url) {
+  const xml = await tryFetch(url);
+  const items = parseXmlItems(xml).slice(0, PER_FEED_LIMIT);
   return items;
 }
 
-function stripHtml(s) { return s.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(); }
-function decode(s) { return s.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'"); }
-
-async function main() {
-  const feedList = readFileSync(resolve("feeds.txt"), "utf8")
-    .split("\n")
-    .map(l => l.trim())
-    .filter(l => l && !l.startsWith("#"));
-
-  // הגבלת מקביליות ל-6 כדי לא להיחנק
-  const concurrency = 6;
+async function pool(arr, limit, fn) {
+  const queue = arr.slice();
   const results = [];
-  const queue = [...feedList];
-
-  async function worker() {
+  const workers = Array.from({ length: Math.min(limit, queue.length) }, async () => {
     while (queue.length) {
-      const url = queue.shift();
-      try {
-        const xml = await fetchWithTimeout(url, 8000);
-        const items = parseBasicRSS(xml).slice(0, 20);
-        results.push(...items);
-      } catch (e) {
-        console.error("Feed failed:", url, e.message);
-      }
+      const item = queue.shift();
+      try { results.push(await fn(item)); } catch (e) { console.error('Feed failed:', item, e.message); }
     }
-  }
-
-  await Promise.all(Array.from({ length: Math.min(concurrency, feedList.length) }, worker));
-
-  // מיון לפי תאריך אם יש, אחרת לפי סדר
-  results.sort((a, b) => (new Date(b.pubDate).getTime() || 0) - (new Date(a.pubDate).getTime() || 0));
-
-  const payload = {
-    updatedAt: new Date().toISOString(),
-    count: results.length,
-    items: results.slice(0, 300) // לא נעמיס
-  };
-
-  mkdirSync(resolve("data"), { recursive: true });
-  writeFileSync(resolve("data/feeds.json"), JSON.stringify(payload, null, 2), "utf8");
-  console.log("Wrote data/feeds.json with", payload.count, "items");
+  });
+  await Promise.all(workers);
+  return results.flat();
 }
 
-await main();
+async function main() {
+  const feedList = readFileSync(INPUT_LIST, 'utf8')
+    .split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+
+  const items = await pool(feedList, CONCURRENCY, fetchFeed);
+
+  // דה־דופליקציה: לפי (host + title) או לינק
+  const seen = new Set();
+  const uniq = [];
+  for (const it of items) {
+    const key = (it.link && it.link !== '#') ? `L|${it.link}` : `T|${host(it.link)}|${it.title}`;
+    if (seen.has(key)) continue; seen.add(key); uniq.push(it);
+  }
+
+  // מיון ולימיט גלובלי
+  uniq.sort((a,b) => normalizeDate(b.pubDate) - normalizeDate(a.pubDate));
+  const final = uniq.slice(0, GLOBAL_LIMIT);
+
+  // כתיבה
+  mkdirSync(OUT_DIR, { recursive: true });
+  const payload = { updatedAt: new Date().toISOString(), count: final.length, items: final };
+  writeFileSync(OUT_FILE, JSON.stringify(payload, null, 2), 'utf8');
+  console.log(`Wrote ${OUT_FILE} with ${payload.count} items at ${payload.updatedAt}`);
+}
+
+main().catch(err => { console.error(err); process.exit(1); });

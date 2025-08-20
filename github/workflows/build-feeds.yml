@@ -2,16 +2,15 @@ name: Build RSS JSON
 
 on:
   schedule:
-    - cron: "*/10 * * * *"   # כל 10 דקות (GitHub לא מבטיח דקה-דקה, אבל עובד טוב)
-  workflow_dispatch:         # גם כפתור ידני
+    - cron: "*/10 * * * *"   # כל 10 דקות (ייתכן ג׳יטר של גיטהאב)
+  workflow_dispatch:         # הפעלה ידנית מה־UI
 
 permissions:
-  contents: write    # כדי לעשות commit ל-json
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
