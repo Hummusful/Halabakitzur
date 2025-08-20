@@ -3,20 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>הלאה בקיצר – מוזיקה </title>
+    <title>הלאה בקיצר – מוזיקה</title>
     <style>
       :root {
         --bg: #121217;
         --card: #1f1f27;
         --txt: #eaeaea;
-        --acc: #ffcc00; /* נקודת דגש לכדורים • וכד' */
+        --acc: #ffcc00;
         --muted: #2a2a35;
         --btn: #d7263d;
         --btnh: #f44336;
-        /* צבעי קישורים – קריאים מאוד על רקע כהה */
-        --link: #8be9fd; /* תכלת-ציאן בהיר (קריא על שחור) */
+        --link: #8be9fd;
         --link-hover: #ffffff;
-        --link-visited: #b6a1ff; /* אופציונלי – סגול בהיר לביקור */
+        --link-visited: #b6a1ff;
+      }
+      /* מצב בהיר */
+      .light {
+        --bg: #f4f4f7;
+        --card: #ffffff;
+        --txt: #1f1f27;
+        --acc: #b8860b;
+        --muted: #e7e7ee;
+        --btn: #0d6efd;
+        --btnh: #0b5ed7;
+        --link: #1a73e8;
+        --link-hover: #0b57d0;
+        --link-visited: #6f42c1;
       }
 
       body {
@@ -26,125 +38,43 @@
         font-family: "Segoe UI", system-ui, Arial, sans-serif;
         direction: rtl;
       }
-      .wrap {
-        max-width: 1100px;
-        margin: auto;
-        padding: 18px;
-      }
-      h1 {
-        margin: 6px 0 14px;
-        text-align: center;
-      }
-      /* קישורים – קריאות גבוהה על כהה */
+      .wrap { max-width: 1100px; margin: auto; padding: 18px; }
+      h1 { margin: 6px 0 14px; text-align: center; }
+
       a {
         color: var(--link);
         text-decoration: none;
         font-weight: 600;
       }
-      a:hover,
-      a:focus-visible {
-        color: var(--link-hover);
-        text-decoration: underline;
-        outline: none;
-      }
-      a:visited {
-        color: var(--link-visited);
-      }
+      a:hover, a:focus-visible { color: var(--link-hover); text-decoration: underline; outline: none; }
+      a:visited { color: var(--link-visited); }
 
       .toolbar {
-        display: flex;
-        gap: 8px;
-        justify-content: center;
-        flex-wrap: wrap;
-        margin-bottom: 14px;
+        display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px;
       }
-      .btn,
-      select {
-        background: var(--btn);
-        color: #fff;
-        border: 0;
-        border-radius: 10px;
-        padding: 8px 12px;
-        cursor: pointer;
-        font-weight: 700;
+      .btn, select {
+        background: var(--btn); color: #fff; border: 0; border-radius: 10px;
+        padding: 8px 12px; cursor: pointer; font-weight: 700;
       }
-      .btn:hover {
-        background: var(--btnh);
-      }
-      .secondary {
-        background: transparent;
-        color: var(--txt);
-        border: 1px solid #ffffff26;
-      }
-      select {
-        appearance: none;
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-        gap: 14px;
-      }
-      .card {
-        background: var(--card);
-        border: 1px solid #ffffff14;
-        border-radius: 14px;
-        padding: 14px;
-      }
+      .btn:hover { background: var(--btnh); }
+      .secondary { background: transparent; color: var(--txt); border: 1px solid #00000026; }
+      select { appearance: none; }
+
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
+      .card { background: var(--card); border: 1px solid #00000014; border-radius: 14px; padding: 14px; }
       .card h2 {
-        margin: 0 0 8px;
-        padding-bottom: 6px;
-        border-bottom: 1px solid var(--muted);
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        font-size: 1rem;
+        margin: 0 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--muted);
+        display: flex; gap: 8px; align-items: center; font-size: 1rem;
       }
-      .card h2 img {
-        width: 20px;
-        height: 20px;
-        border-radius: 4px;
-      }
-      ul {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-      }
-      li {
-        padding-right: 14px;
-        position: relative;
-        margin: 0 0 10px;
-      }
-      li::before {
-        content: "•";
-        position: absolute;
-        right: 0;
-        color: var(--acc);
-      }
-      .src {
-        font-size: 0.72rem;
-        background: #ffffff14;
-        padding: 2px 8px;
-        border-radius: 999px;
-        margin-left: 6px;
-      }
-      .time {
-        font-size: 0.8rem;
-        opacity: 0.7;
-        margin-top: 4px;
-      }
-      .snip {
-        display: none;
-        font-size: 0.9rem;
-        opacity: 0.8;
-        margin-top: 4px;
-      }
-      body.show-snips .snip {
-        display: block;
-      }
-      .ltr {
-        direction: ltr;
-        text-align: left;
-      }
+      .card h2 img { width: 20px; height: 20px; border-radius: 4px; }
+      ul { list-style: none; margin: 0; padding: 0; }
+      li { padding-right: 14px; position: relative; margin: 0 0 10px; }
+      li::before { content: "•"; position: absolute; right: 0; color: var(--acc); }
+      .src { font-size: 0.72rem; background: #00000014; padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
+      .time { font-size: 0.8rem; opacity: 0.7; margin-top: 4px; }
+      .snip { display: none; font-size: 0.9rem; opacity: 0.8; margin-top: 4px; }
+      body.show-snips .snip { display: block; }
+      .ltr { direction: ltr; text-align: left; }
     </style>
   </head>
   <body>
@@ -154,19 +84,13 @@
       <div class="toolbar">
         <button class="btn" id="refresh">רענן</button>
         <button class="btn" id="toggleSnips">הצג תקצירים</button>
-        <button class="btn secondary" id="toggleView" data-mode="source">
-          תצוגה: לפי מקור
-        </button>
+        <button class="btn secondary" id="toggleView" data-mode="source">תצוגה: לפי מקור</button>
         <select class="secondary" id="perSource">
           <option value="3">3 לפר מקור</option>
           <option value="5" selected>5 לפר מקור</option>
           <option value="10">10 לפר מקור</option>
         </select>
-        <select class="secondary" id="combinedCap">
-          <option value="20">20 במשולב</option>
-          <option value="40" selected>40 במשולב</option>
-          <option value="60">60 במשולב</option>
-        </select>
+        <button class="btn" id="themeToggle" title="כהה/בהיר">מצב כהה/בהיר</button>
       </div>
 
       <div id="status"></div>
@@ -189,276 +113,218 @@
     </div>
 
     <script>
+      // ===== הגדרות =====
       const feeds = [
-        {
-          name: "Mako-Music",
-          url: "https://rcs.mako.co.il/rss/f6750a2610f26110VgnVCM1000005201000aRCRD.xml",
-          lang: "rtl",
-        },
-        {
-          name: "Ynet – תרבות",
-          url: "https://www.ynet.co.il/Integration/StoryRss1854.xml",
-          lang: "rtl",
-        },
-        {
-          name: "XXL (Hip-Hop)",
-          url: "https://www.xxlmag.com/feed/",
-          lang: "ltr",
-        },
-        {
-          name: "Walla תרבות",
-          url: "https://rss.walla.co.il/feed/272",
-          lang: "rtl",
-        },
-        {
-          name: "Pitchfork News",
-          url: "https://pitchfork.com/rss/news/",
-          lang: "ltr",
-        },
+        { name: "Mako-Music", url: "https://rcs.mako.co.il/rss/f6750a2610f26110VgnVCM1000005201000aRCRD.xml", lang: "rtl" },
+        { name: "Ynet – תרבות", url: "https://www.ynet.co.il/Integration/StoryRss1854.xml", lang: "rtl" },
+        { name: "XXL (Hip-Hop)", url: "https://www.xxlmag.com/feed/", lang: "ltr" },
+        { name: "Walla תרבות", url: "https://rss.walla.co.il/feed/272", lang: "rtl" },
+        { name: "Pitchfork News", url: "https://pitchfork.com/rss/news/", lang: "ltr" },
       ];
+      const CORS_PROXY = (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`;
+      const CACHE_TTL = 15 * 60 * 1000; // 15 דקות
 
-      // ---- עזר קצר ----
+      // ===== עזרים קצרים =====
       const $ = (s, r = document) => r.querySelector(s);
-      const grid = $("#grid"),
-        status = $("#status");
+      const grid = $("#grid"), status = $("#status");
+      const jget = (k, d=null) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+      const jset = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+      const key = (prefix, id) => `${prefix}:${id}`;
+      const txt = (s) => { const d = document.createElement("div"); d.innerHTML = s || ""; return d.textContent || ""; };
+      const icon = (u) => { try { return "https://www.google.com/s2/favicons?sz=64&domain_url=" + new URL(u).origin; } catch { return ""; } };
 
-      // מצב + טעינת העדפות לפני סנכרון ה־UI (כדי למנוע פליקר)
+      // זמן יחסי (יחידות ביחיד)
+      function rel(date) {
+        const d = new Date(date); if (isNaN(d)) return "";
+        const diffSec = (d - new Date()) / 1000;
+        const steps = [[60,"second"],[60,"minute"],[24,"hour"],[7,"day"],[4.345,"week"],[12,"month"],[Infinity,"year"]];
+        let acc=1, unit="second", val=diffSec;
+        for (const [s,u] of steps) { if (Math.abs(diffSec) < acc*s) { unit=u; val=diffSec/acc; break; } acc*=s; }
+        try { return new Intl.RelativeTimeFormat("he-IL",{numeric:"auto"}).format(Math.round(val), unit); } catch { return ""; }
+      }
+
+      // ===== מצב =====
       const state = {
-        view: "source", // 'source' | 'combined'
+        view: (localStorage.getItem("viewMode") === "combined") ? "combined" : "source",
         perSource: Number(localStorage.getItem("perSource") || 5),
-        combinedCap: Number(localStorage.getItem("combinedCap") || 40),
+        theme: (localStorage.getItem("theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")),
         data: null,
       };
-      const savedView = localStorage.getItem("viewMode");
-      if (savedView === "source" || savedView === "combined") {
-        state.view = savedView;
-      }
 
-      // סנכרון ה־UI לפי מצב קיים
+      // החלת מצב התחלתי
       $("#perSource").value = String(state.perSource);
-      $("#combinedCap").value = String(state.combinedCap);
       $("#toggleView").dataset.mode = state.view;
-      $("#toggleView").textContent =
-        "תצוגה: " + (state.view === "combined" ? "משולב" : "לפי מקור");
+      $("#toggleView").textContent = "תצוגה: " + (state.view === "combined" ? "משולב" : "לפי מקור");
+      if (state.theme === "light") document.body.classList.add("light");
 
-      function txt(s) {
-        const d = document.createElement("div");
-        d.innerHTML = s || "";
-        return d.textContent || "";
+      // ===== קריאה + מטמון =====
+      function readCache(feed) {
+        const k = key("rss", feed.url);
+        const hit = jget(k);
+        if (!hit) return null;
+        if ((Date.now() - hit.ts) > CACHE_TTL) return null;
+        return hit.items;
       }
-      function getDate(n) {
-        return (
-          n.querySelector("pubDate,updated,published,dc\\:date")?.textContent ||
-          ""
-        );
-      }
-      function rel(date) {
-        const d = new Date(date);
-        if (isNaN(d)) return "";
-        const diff = (d - new Date()) / 1000;
-        const abs = Math.abs(diff);
-        const steps = [
-          [60, "seconds"],
-          [60, "minutes"],
-          [24, "hours"],
-          [7, "days"],
-          [4.345, "weeks"],
-          [12, "months"],
-          [1 / 0, "years"],
-        ];
-        let acc = 1,
-          unit = "seconds",
-          val = diff;
-        for (const [s, u] of steps) {
-          if (abs < acc * s) {
-            unit = u;
-            val = diff / acc;
-            break;
-          }
-          acc *= s;
-        }
-        try {
-          return new Intl.RelativeTimeFormat("he-IL", {
-            numeric: "auto",
-          }).format(Math.round(val), unit);
-        } catch {
-          return "";
-        }
-      }
-      function icon(u) {
-        try {
-          return (
-            "https://www.google.com/s2/favicons?sz=64&domain_url=" +
-            new URL(u).origin
-          );
-        } catch {
-          return "";
-        }
+      function writeCache(feed, items) {
+        const k = key("rss", feed.url);
+        jset(k, { ts: Date.now(), items });
       }
 
-      async function fetchFeed(feed, limit) {
-        const url = `https://api.allorigins.win/get?url=${encodeURIComponent(
-          feed.url
-        )}`;
-        const res = await fetch(url);
+      async function fetchFeed(feed) {
+        // ניסיון מטמון
+        const cached = readCache(feed);
+        if (cached) return { feed, items: cached, cached: true };
+
+        // שליפה מהאינטרנט
+        const res = await fetch(CORS_PROXY(feed.url));
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
         const contents = json?.contents || "";
-        if (!contents) return { feed, items: [] }; // הגנה: אין תוכן
+        if (!contents) return { feed, items: [], cached: false };
 
         const xml = new DOMParser().parseFromString(contents, "text/xml");
-        if (xml.querySelector("parsererror")) return { feed, items: [] }; // שגיאת פרסר? נחזיר ריק
+        if (xml.querySelector("parsererror")) return { feed, items: [], cached: false };
 
         const nodes = [...xml.querySelectorAll("item,entry")];
-        const items = nodes
-          .map((n) => {
-            const l =
-              n.querySelector("link")?.getAttribute?.("href") ||
-              n.querySelector("link")?.textContent ||
-              "#";
+        const items = nodes.map((n) => {
+            const l = n.querySelector("link")?.getAttribute?.("href") || n.querySelector("link")?.textContent || "#";
+            const date = n.querySelector("pubDate,updated,published,dc\\:date")?.textContent || "";
             return {
-              title: txt(
-                n.querySelector("title")?.textContent || "(ללא כותרת)"
-              ),
-              link: l,
-              desc: txt(
-                n.querySelector("description,summary,content")?.textContent ||
-                  ""
-              ),
-              date: txt(getDate(n)),
+              title: txt(n.querySelector("title")?.textContent || "(ללא כותרת)"),
+              link: l, desc: txt(n.querySelector("description,summary,content")?.textContent || ""),
+              date: txt(date),
             };
           })
-          .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
-          .slice(0, limit);
-        return { feed, items };
+          .sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
+
+        writeCache(feed, items);
+        return { feed, items, cached: false };
       }
 
+      // ===== רינדור =====
       function renderSource(data) {
         grid.innerHTML = "";
+        const frag = document.createDocumentFragment();
+
         data.forEach(({ feed, items }) => {
           const card = document.importNode($("#cardTmpl").content, true);
           const root = card.querySelector(".card");
           if (feed.lang === "ltr") root.classList.add("ltr");
           card.querySelector("img").src = icon(feed.url);
           card.querySelector(".title").textContent = feed.name;
-          const ul = card.querySelector(".list");
 
+          const ul = card.querySelector(".list");
+          const listFrag = document.createDocumentFragment();
           const limited = items.slice(0, state.perSource);
+
           if (!limited.length) {
             const li = document.createElement("li");
             li.innerHTML = `<div class="time">אין פריטים להצגה כרגע.</div>`;
-            ul.appendChild(li);
+            listFrag.appendChild(li);
           } else {
-            limited.forEach((it) => {
+            for (const it of limited) {
               const li = document.createElement("li");
-              li.innerHTML = `<div><a href="${
-                it.link
-              }" target="_blank" rel="noopener">${it.title}</a></div>
+              li.innerHTML = `<div><a href="${it.link}" target="_blank" rel="noopener">${it.title}</a></div>
                               <div class="snip">${it.desc}</div>
-                              <div class="time">${txt(it.date)} · ${rel(
-                it.date
-              )}</div>`;
-              ul.appendChild(li);
-            });
+                              <div class="time">${txt(it.date)} · ${rel(it.date)}</div>`;
+              listFrag.appendChild(li);
+            }
           }
-
-          grid.appendChild(card);
+          ul.appendChild(listFrag);
+          frag.appendChild(card);
         });
+
+        grid.appendChild(frag);
       }
 
       function renderCombined(data) {
         grid.innerHTML = "";
         const card = document.importNode($("#combinedTmpl").content, true);
         const ul = card.querySelector(".list");
-        const seen = new Set(),
-          out = [];
-        const host = (u) => {
-          try {
-            return new URL(u).host.replace(/^www\./, "");
-          } catch {
-            return "";
-          }
-        };
-        const perSrc = {};
+        const seen = new Set(), out = [], perSrc = {};
+        const host = (u) => { try { return new URL(u).host.replace(/^www\./,""); } catch { return ""; } };
 
-        data.forEach(({ feed, items }) => {
-          items.forEach((it) => {
+        for (const { feed, items } of data) {
+          for (const it of items) {
             perSrc[feed.name] = perSrc[feed.name] || 0;
-            if (perSrc[feed.name] >= state.perSource) return;
+            if (perSrc[feed.name] >= state.perSource) continue;
             const key = `${host(it.link)}|${(it.title || "").trim()}`;
-            if (seen.has(key)) return;
+            if (seen.has(key)) continue;
             seen.add(key);
             out.push({ ...it, source: feed.name, lang: feed.lang });
             perSrc[feed.name]++;
-          });
-        });
+          }
+        }
 
-        out.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-        out.slice(0, state.combinedCap).forEach((it) => {
+        out.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
+        const listFrag = document.createDocumentFragment();
+        for (const it of out) {
           const li = document.createElement("li");
           if (it.lang === "ltr") li.classList.add("ltr");
-          li.innerHTML = `<div><span class="src">${it.source}</span><a href="${
-            it.link
-          }" target="_blank" rel="noopener">${it.title}</a></div>
+          li.innerHTML = `<div><span class="src">${it.source}</span>
+                            <a href="${it.link}" target="_blank" rel="noopener">${it.title}</a></div>
                           <div class="snip">${it.desc}</div>
-                          <div class="time">${txt(it.date)} · ${rel(
-            it.date
-          )}</div>`;
-          ul.appendChild(li);
-        });
+                          <div class="time">${txt(it.date)} · ${rel(it.date)}</div>`;
+          listFrag.appendChild(li);
+        }
+        ul.appendChild(listFrag);
         grid.appendChild(card);
       }
 
+      // ===== זרימת טעינה =====
       async function load() {
         status.textContent = "";
         try {
-          const jobs = feeds.map((f) => fetchFeed(f, state.perSource));
-          const results = await Promise.allSettled(jobs);
-          const ok = results
-            .filter((r) => r.status === "fulfilled")
-            .map((r) => r.value);
+          // 1) נסה להציג מיד מהמטמון (אם קיים לכל הפחות למקור אחד)
+          const cachedResults = feeds.map((f) => {
+            const items = readCache(f);
+            return items ? { feed: f, items, cached: true } : null;
+          }).filter(Boolean);
+
+          if (cachedResults.length) {
+            state.data = cachedResults;
+            (state.view === "combined" ? renderCombined : renderSource)(cachedResults);
+            status.textContent = `${cachedResults.length}/${feeds.length} מהמטמון · מרענן...`;
+          }
+
+          // 2) שליפה מלאה (מעדכנת מטמון ומרנדרת סופית)
+          const results = await Promise.allSettled(feeds.map(fetchFeed));
+          const ok = results.filter(r => r.status === "fulfilled").map(r => r.value);
           state.data = ok;
           (state.view === "combined" ? renderCombined : renderSource)(ok);
-          status.textContent = `${ok.length}/${feeds.length} נטענו`;
+          const cachedCount = ok.filter(x => x.cached).length;
+          status.textContent = `${ok.length}/${feeds.length} נטענו${cachedCount ? ` (${cachedCount} מהמטמון)` : ""}`;
         } catch (e) {
           status.textContent = "שגיאה בטעינת פידים";
           console.error(e);
         }
       }
 
-      // ---- אינטראקציה ----
+      // ===== אינטראקציה =====
       $("#refresh").addEventListener("click", load);
       $("#toggleSnips").addEventListener("click", (e) => {
         document.body.classList.toggle("show-snips");
-        e.currentTarget.textContent = document.body.classList.contains(
-          "show-snips"
-        )
-          ? "הסתר תקצירים"
-          : "הצג תקצירים";
+        e.currentTarget.textContent = document.body.classList.contains("show-snips") ? "הסתר תקצירים" : "הצג תקצירים";
       });
       $("#toggleView").addEventListener("click", (e) => {
-        state.view =
-          e.currentTarget.dataset.mode === "combined" ? "source" : "combined";
+        state.view = e.currentTarget.dataset.mode === "combined" ? "source" : "combined";
         e.currentTarget.dataset.mode = state.view;
-        e.currentTarget.textContent =
-          "תצוגה: " + (state.view === "combined" ? "משולב" : "לפי מקור");
-        (state.view === "combined" ? renderCombined : renderSource)(
-          state.data || []
-        );
+        e.currentTarget.textContent = "תצוגה: " + (state.view === "combined" ? "משולב" : "לפי מקור");
+        (state.view === "combined" ? renderCombined : renderSource)(state.data || []);
         localStorage.setItem("viewMode", state.view);
       });
       $("#perSource").addEventListener("change", async () => {
         state.perSource = Number($("#perSource").value);
         localStorage.setItem("perSource", String(state.perSource));
-        await load(); // צריך למשוך מחדש כדי להגדיל/להקטין פר מקור
+        await load();
       });
-      $("#combinedCap").addEventListener("change", () => {
-        state.combinedCap = Number($("#combinedCap").value);
-        localStorage.setItem("combinedCap", String(state.combinedCap));
-        if (state.view === "combined" && state.data) renderCombined(state.data);
+      $("#themeToggle").addEventListener("click", () => {
+        document.body.classList.toggle("light");
+        state.theme = document.body.classList.contains("light") ? "light" : "dark";
+        localStorage.setItem("theme", state.theme);
       });
 
-      // אם הגיעת כבר עם תקצירים מוצגים, עדכן טקסט כפתור
+      // אם נכנסת כבר עם תקצירים מוצגים, עדכן טקסט כפתור
       if (document.body.classList.contains("show-snips")) {
         $("#toggleSnips").textContent = "הסתר תקצירים";
       }
